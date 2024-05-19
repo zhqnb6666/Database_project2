@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Flask Interaction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        #responseMessage {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+<h1>Interact with Flask</h1>
+<form id="dataForm">
+    <input type="text" id="inputData" name="inputData" placeholder="Enter some data here">
+    <button type="button" onclick="submitData()">Submit</button>
+</form>
+<div id="responseMessage"></div>
+
+<script>
+    function submitData() {
+        const inputData = document.getElementById('inputData').value;
+        fetch('http://localhost:5000/process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({data: inputData})
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('responseMessage').textContent = 'Server says: ' + data.message;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('responseMessage').textContent = 'An error occurred.';
+            });
+
+    }
+</script>
+</body>
+</html>
