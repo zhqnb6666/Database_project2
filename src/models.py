@@ -8,6 +8,7 @@ class Station(db.Model):
     district = db.Column(db.String(255))
     intro = db.Column(db.Text)
     chinese_name = db.Column(db.String(255), unique=True, nullable=False)
+    status = db.Column(db.Integer, nullable=False, default=0)
 
 
 class Chukou(db.Model):
@@ -28,9 +29,10 @@ class Out(db.Model):
 class Bus(db.Model):
     __tablename__ = 'buses'
     bus_id = db.Column(db.Integer, primary_key=True)
+    station_id = db.Column(db.Integer, db.ForeignKey('stations.station_id'), nullable=False)
     bus_name = db.Column(db.String(255))
     bus_info = db.Column(db.Text)
-    chukou = db.Column(db.String(255), db.ForeignKey('chukous.chukou_name'))
+    chukou = db.Column(db.String(255))
 
 
 class Passenger(db.Model):
@@ -82,6 +84,7 @@ class RidePassenger(db.Model):
     price = db.Column(db.Numeric, nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
+    level = db.Column(db.Integer, nullable=False, default=0)
 
 
 class RideCard(db.Model):
@@ -93,6 +96,7 @@ class RideCard(db.Model):
     price = db.Column(db.Numeric, nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
+    level = db.Column(db.Integer, nullable=False, default=0)
 
 
 class UnexitedRidePassenger(db.Model):
@@ -101,6 +105,7 @@ class UnexitedRidePassenger(db.Model):
     user_id = db.Column(db.Text, db.ForeignKey('passengers.id_number'), nullable=False)
     start_station = db.Column(db.Text, db.ForeignKey('stations.english_name'), nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
+    level = db.Column(db.Integer, nullable=False, default=0)
 
 
 class UnexitedRideCard(db.Model):
@@ -109,3 +114,4 @@ class UnexitedRideCard(db.Model):
     user_id = db.Column(db.Text, db.ForeignKey('cards.code'), nullable=False)
     start_station = db.Column(db.Text, db.ForeignKey('stations.english_name'), nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
+    level = db.Column(db.Integer, nullable=False, default=0)

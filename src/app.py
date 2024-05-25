@@ -4,6 +4,7 @@ from config import Config
 import logging
 from flask_cors import CORS  # 导入 CORS
 from datetime import datetime
+from function import *
 
 db = SQLAlchemy()
 
@@ -32,7 +33,7 @@ def create_app():
 
 
 def register_routes(app):
-    from models import Station, Line, LineStation, Passenger, Card, RidePassenger, RideCard, UnexitedRidePassenger, UnexitedRideCard
+    from models import Station, Line, LineStation, Passenger, Card, RidePassenger, RideCard, Bus, Out, UnexitedRidePassenger, UnexitedRideCard
 
     @app.route('/test_connection', methods=['GET'])
     def test_connection():
@@ -45,7 +46,7 @@ def register_routes(app):
         data = request.json
         try:
             new_station = Station(english_name=data['english_name'], district=data['district'], intro=data['intro'],
-                                  chinese_name=data['chinese_name'])
+                                  chinese_name=data['chinese_name'], status=data['status'])
             db.session.add(new_station)
             db.session.commit()
             return jsonify({'message': 'Station added'}), 201
@@ -66,6 +67,7 @@ def register_routes(app):
             station.district = data.get('district', station.district)
             station.intro = data.get('intro', station.intro)
             station.chinese_name = data.get('chinese_name', station.chinese_name)
+            station.status = data.get('status', station.status)
             db.session.commit()
             return jsonify({'message': 'Station updated'}), 200
         except Exception as e:
@@ -234,7 +236,12 @@ def register_routes(app):
     def board_passenger():
         data = request.json
         try:
-            ride = UnexitedRidePassenger(user_id=data['user_id'], start_station=data['start_station'], start_time=datetime.now())
+            ride = UnexitedRidePassenger(user_id=data['user_id'], start_station=data['start_station'],
+                                         start_time=datetime.now(), level=data['carriage_type'])
+            start_station = (db.session.query(Station)
+                             .filter(Station.english_name == data['start_station']).first())
+            if start_station.status == 1 or start_station.status == 2:
+                return jsonify({'message': 'Start station is not operational'}), 400
             db.session.add(ride)
             db.session.commit()
             return jsonify({'message': 'Passenger boarded'}), 201
@@ -253,13 +260,30 @@ def register_routes(app):
             ).first()
 
             if ride:
+                # Get the Chinese names of the start and end stations
+                start_station_chinese = db.session.query(Station.chinese_name).filter(
+                    Station.english_name == ride.start_station).first()[0]
+                end_station = db.session.query(Station).filter(
+                    Station.english_name == data['end_station']).first()
+
+                if end_station.status in [1, 2]:
+                    return jsonify({'message': 'End station is not operational'}), 400
+
+                end_station_chinese = end_station.chinese_name
+
+                # Get the price
+                price = get_price(start_station_chinese, end_station_chinese)
+                if ride.level == 1:
+                    price = price * 2
+
                 # Create a new RidePassenger object with the same data
                 completed_ride = RidePassenger(
                     user_id=ride.user_id,
                     start_station=ride.start_station,
                     start_time=ride.start_time,
                     end_station=data['end_station'],
-                    end_time=datetime.now()
+                    end_time=datetime.now(),
+                    price=price
                 )
 
                 # Add the completed ride to the RidePassenger table
@@ -269,7 +293,7 @@ def register_routes(app):
                 db.session.delete(ride)
 
                 db.session.commit()
-                return jsonify({'message': 'Passenger exited'}), 200
+                return jsonify({'message': 'Passenger exited', 'price': price}), 200
             else:
                 return jsonify({'message': 'No active ride found for this passenger'}), 404
         except Exception as e:
@@ -284,8 +308,13 @@ def register_routes(app):
             ride = UnexitedRideCard(
                 user_id=data['user_id'],
                 start_station=data['start_station'],
-                start_time=datetime.now()
+                start_time=datetime.now(),
+                level=data['carriage_type']
             )
+            start_station = db.session.query(Station).filter(
+                Station.english_name == data['start_station']).first()
+            if start_station.status == 1 or start_station.status == 2:
+                return jsonify({'message': 'Start station is not operational'}), 400
             db.session.add(ride)
             db.session.commit()
             return jsonify({'message': 'Card user boarded'}), 201
@@ -305,11 +334,25 @@ def register_routes(app):
 
             if ride:
                 # Create a new RideCard object with the same data
+                start_station_chinese = db.session.query(Station.chinese_name).filter(
+                    Station.english_name == ride.start_station).first()[0]
+
+                end_station = db.session.query(Station).filter(
+                    Station.english_name == data['end_station']).first()
+
+                if end_station.status in [1, 2]:
+                    return jsonify({'message': 'End station is not operational'}), 400
+
+                end_station_chinese = end_station.chinese_name
+                price = get_price(start_station_chinese, end_station_chinese)
+                if ride.level == 1:
+                    price = price * 2
                 completed_ride = RideCard(
                     user_id=ride.user_id,
                     start_station=ride.start_station,
                     start_time=ride.start_time,
                     end_station=data['end_station'],
+                    price=price,
                     end_time=datetime.now()
                 )
 
@@ -320,7 +363,7 @@ def register_routes(app):
                 db.session.delete(ride)
 
                 db.session.commit()
-                return jsonify({'message': 'Card user exited'}), 200
+                return jsonify({'message': 'Card user exited', 'price': price}), 200
             else:
                 return jsonify({'message': 'No active ride found for this card'}), 404
         except Exception as e:
@@ -352,6 +395,90 @@ def register_routes(app):
             board_info = [{'user_id': b.user_id, 'start_station': b.start_station, 'start_time': b.start_time} for b in
                           board_info]
             return jsonify(board_info), 200
+        except Exception as e:
+            print(str(e))
+            return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
+
+        # 8. Records search
+
+    @app.route('/search_records', methods=['POST'])
+    def search_records():
+        # Get query parameters
+        data = request.json
+        station = data.get('station')
+        passenger = data.get('passenger')
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        # Start with all records
+        try:
+            query = db.session.query(RidePassenger)
+
+            # Filter by station if provided
+            if station:
+                query = query.filter(RidePassenger.start_station == station)
+
+            # Filter by passenger if provided
+            if passenger:
+                query = query.filter(RidePassenger.user_id == passenger)
+
+            # Filter by time range if provided
+            if start_time and end_time:
+                query = query.filter(RidePassenger.start_time >= start_time, RidePassenger.end_time <= end_time)
+
+            # Execute the query and fetch all results
+            records = query.all()
+
+            # Convert records to JSON
+            records_json = [{'user_id': r.user_id, 'start_station': r.start_station, 'start_time': r.start_time,
+                             'end_station': r.end_station, 'end_time': r.end_time, 'price': r.price} for r in records]
+            return jsonify(records_json), 200
+        except Exception as e:
+            print(str(e))
+            return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
+
+    @app.route('/search_bus/<string:station_name>', methods=['GET'])
+    def search_bus(station_name):
+        # Start with all records
+        try:
+            query = db.session.query(Bus)
+
+            # Filter by station if provided
+            if station_name:
+                station_id = db.session.query(Station.station_id).filter(Station.english_name == station_name).first()[0]
+                query = query.filter(Bus.station_id == station_id)
+
+            # Execute the query and fetch all results
+            buses = query.all()
+
+            # Convert records to JSON
+            buses_json = [
+                {'bus_id': b.bus_id, 'station_id': b.station_id, 'bus_name': b.bus_name, 'bus_info': b.bus_info,
+                 'chukou': b.chukou} for b in buses]
+
+            return jsonify(buses_json), 200
+        except Exception as e:
+            print(str(e))
+            return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
+
+    @app.route('/search_out/<string:station_name>', methods=['GET'])
+    def search_out(station_name):
+        # Start with all records
+        try:
+            query = db.session.query(Out)
+
+            # Filter by station if provided
+            if station_name:
+                station_id = db.session.query(Station.station_id).filter(Station.english_name == station_name).first()[0]
+                query = query.filter(Out.station_id == station_id)
+
+            # Execute the query and fetch all results
+            outs = query.all()
+
+            # Convert records to JSON
+            outs_json = [{'out_id': o.out_id, 'station_id': o.station_id, 'outt': o.outt, 'textt': o.textt} for o in
+                         outs]
+
+            return jsonify(outs_json), 200
         except Exception as e:
             print(str(e))
             return jsonify({'message': 'Error occurred', 'error': str(e)}), 400

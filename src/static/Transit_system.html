@@ -40,6 +40,10 @@
             <a class="nav-link" id="search_board-tab" data-toggle="tab" href="#search_board" role="tab">Search Boarding
                 Information</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" id="search_records-tab" data-toggle="tab" href="#search_records" role="tab">Search
+                Records</a>
+        </li>
     </ul>
 
     <!-- Tab Content -->
@@ -64,6 +68,14 @@
                 <div class="mb-3">
                     <label for="introduction" class="form-label">Introduction</label>
                     <textarea id="introduction" class="form-control" placeholder="Enter Introduction"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select id="status" class="form-control">
+                        <option value="0">Operational</option>
+                        <option value="1">Under Construction</option>
+                        <option value="2">Closed</option>
+                    </select>
                 </div>
                 <!-- Actions -->
                 <button type="button" onclick="addStation()" class="btn btn-primary">Add Station</button>
@@ -194,6 +206,27 @@
                 <button type="button" onclick="searchStations()" class="btn btn-info">Search Stations</button>
             </form>
             <div id="searchResults" class="mt-4"></div>
+            <h3 class="mt-4">Search Bus</h3>
+            <form id="searchBusForm">
+                <div class="form-group">
+                    <label for="searchBusStation">Station Name</label>
+                    <input type="text" class="form-control" id="searchBusStation" placeholder="Enter Station Name">
+                </div>
+                <button type="button" onclick="searchBus()" class="btn btn-info">Search Bus</button>
+            </form>
+            <div id="searchBusResults" class="mt-4"></div>
+
+            <!-- Search Out Form -->
+            <h3 class="mt-4">Search Out</h3>
+            <form id="searchOutForm">
+                <div class="form-group">
+                    <label for="searchOutStation">Station Name</label>
+                    <input type="text" class="form-control" id="searchOutStation" placeholder="Enter Station Name">
+                </div>
+                <button type="button" onclick="searchOut()" class="btn btn-info">Search Out</button>
+            </form>
+            <div id="searchOutResults" class="mt-4"></div>
+
         </div>
 
         <!-- Boarding tab -->
@@ -206,6 +239,13 @@
                 <label for="boardUserId"></label><input type="text" id="boardUserId" placeholder="User ID" required>
                 <label for="boardStartStation"></label><input type="text" id="boardStartStation"
                                                               placeholder="Start Station" required>
+                <div class="mb-3">
+                    <label for="carriageType" class="form-label"></label>
+                    <select id="carriageType" class="form-control">
+                        <option value="0">Business</option>
+                        <option value="1">Normal</option>
+                    </select>
+                </div>
                 <button type="button" onclick="boardPassenger()" class="btn btn-primary">Board Passenger</button>
             </form>
             <div id="boardResponse" class="mt-3"></div>
@@ -231,6 +271,13 @@
                 <label for="boardCardId"></label><input type="text" id="boardCardId" placeholder="Card ID" required>
                 <label for="boardCardStartStation"></label><input type="text" id="boardCardStartStation"
                                                                   placeholder="Start Station" required>
+                <div class="mb-3">
+                    <label for="cardType" class="form-label"></label>
+                    <select id="cardType" class="form-control">
+                        <option value="1">Business</option>
+                        <option value="0">Normal</option>
+                    </select>
+                </div>
                 <button type="button" onclick="boardCard()" class="btn btn-primary">Board Card</button>
             </form>
             <div id="boardCardResponse" class="mt-3"></div>
@@ -270,6 +317,31 @@
             <div id="searchCardResponse" class="mt-3"></div>
         </div>
 
+        <!-- Search Records tab -->
+        <div class="tab-pane fade" id="search_records" role="tabpanel">
+            <h2 class="mt-4">Search Records</h2>
+            <form id="searchRecordsForm">
+                <div class="form-group">
+                    <label for="searchStation">Station</label>
+                    <input type="text" class="form-control" id="searchStation" placeholder="Enter Station">
+                </div>
+                <div class="form-group">
+                    <label for="searchPassenger">Passenger</label>
+                    <input type="text" class="form-control" id="searchPassenger" placeholder="Enter Passenger">
+                </div>
+                <div class="form-group">
+                    <label for="searchStartTime">Start Time</label>
+                    <input type="datetime-local" class="form-control" id="searchStartTime">
+                </div>
+                <div class="form-group">
+                    <label for="searchEndTime">End Time</label>
+                    <input type="datetime-local" class="form-control" id="searchEndTime">
+                </div>
+                <button type="button" onclick="searchRecords()" class="btn btn-info">Search Records</button>
+            </form>
+            <div id="searchRecordsResults" class="mt-4"></div>
+        </div>
+
 
     </div>
 </div>
@@ -281,6 +353,7 @@
         const chineseName = document.getElementById('chineseName').value;
         const district = document.getElementById('district').value;
         const introduction = document.getElementById('introduction').value;
+        const status = document.getElementById('status').value;
 
         fetch('/stations', {
             method: 'POST',
@@ -291,7 +364,8 @@
                 english_name: englishName,
                 chinese_name: chineseName,
                 district: district,
-                intro: introduction
+                intro: introduction,
+                status: status
             })
         })
             .then(response => {
@@ -317,6 +391,7 @@
         const chineseName = document.getElementById('chineseName').value;
         const district = document.getElementById('district').value;
         const introduction = document.getElementById('introduction').value;
+        const status = document.getElementById('status').value;
 
         fetch(`/stations/${englishName}`, {
             method: 'PUT',
@@ -327,7 +402,8 @@
                 english_name: englishName,
                 chinese_name: chineseName,
                 district: district,
-                intro: introduction
+                intro: introduction,
+                status: status
             })
         })
             .then(response => response.json())
@@ -512,7 +588,8 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 user_id: userId,
-                start_station: startStation
+                start_station: startStation,
+                carriage_type: document.getElementById('carriageType').value
             })
         }).then(response => {
             if (!response.ok) {
@@ -561,7 +638,8 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 user_id: cardId,
-                start_station: startStation
+                start_station: startStation,
+                carriage_type: document.getElementById('cardType').value
             })
         }).then(response => response.json())
             .then(data => {
@@ -617,6 +695,88 @@
             })
             .catch(error => {
                 document.getElementById('searchCardResponse').textContent = 'Failed to search card: ' + error.error;
+            });
+    }
+
+    function searchRecords() {
+        const station = document.getElementById('searchStation').value;
+        const passenger = document.getElementById('searchPassenger').value;
+        const startTime = document.getElementById('searchStartTime').value;
+        const endTime = document.getElementById('searchEndTime').value;
+
+        fetch('/search_records', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                station: station,
+                passenger: passenger,
+                start_time: startTime,
+                end_time: endTime
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                const resultsContainer = document.getElementById('searchRecordsResults');
+                resultsContainer.innerHTML = '';
+
+                data.forEach(record => {
+                    const recordElement = document.createElement('p');
+                    recordElement.textContent = `User ID: ${record.user_id}, Start Station: ${record.start_station}, Start Time: ${record.start_time}, End Station: ${record.end_station}, End Time: ${record.end_time}, Price: ${record.price}`;
+                    resultsContainer.appendChild(recordElement);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    function searchBus() {
+        const stationName = document.getElementById('searchBusStation').value;
+
+        fetch(`/search_bus/${stationName}`)
+            .then(response => response.json())
+            .then(data => {
+                const resultsContainer = document.getElementById('searchBusResults');
+                resultsContainer.innerHTML = '';
+
+                if (data.length === 0) {
+                    resultsContainer.innerHTML = '<p>该站暂无公交数据</p>';
+                } else {
+                    data.forEach(bus => {
+                        const busElement = document.createElement('p');
+                        busElement.textContent = `Bus ID: ${bus.bus_id}, Station ID: ${bus.station_id}, Bus Name: ${bus.bus_name}, Bus Info: ${bus.bus_info}, Chukou: ${bus.chukou}`;
+                        resultsContainer.appendChild(busElement);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    function searchOut() {
+        const stationName = document.getElementById('searchOutStation').value;
+
+        fetch(`/search_out/${stationName}`)
+            .then(response => response.json())
+            .then(data => {
+                const resultsContainer = document.getElementById('searchOutResults');
+                resultsContainer.innerHTML = '';
+
+                if (data.length === 0) {
+                    resultsContainer.innerHTML = '<p>该站暂无出口数据</p>';
+                } else {
+                    data.forEach(out => {
+                        const outElement = document.createElement('p');
+                        outElement.textContent = `Out ID: ${out.out_id}, Station ID: ${out.station_id}, Out: ${out.outt}, Text: ${out.textt}`;
+                        resultsContainer.appendChild(outElement);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
             });
     }
 
