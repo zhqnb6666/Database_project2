@@ -227,6 +227,21 @@
             </form>
             <div id="searchOutResults" class="mt-4"></div>
 
+            <!-- Search Route Form -->
+            <h3 class="mt-4">Search Route</h3>
+            <form id="searchRouteForm">
+                <div class="form-group">
+                    <label for="searchStartStation">Start Station</label>
+                    <input type="text" class="form-control" id="searchStartStation" placeholder="Enter Start Station">
+                </div>
+                <div class="form-group">
+                    <label for="searchEndStation">End Station</label>
+                    <input type="text" class="form-control" id="searchEndStation" placeholder="Enter End Station">
+                </div>
+                <button type="button" onclick="searchRoute()" class="btn btn-info">Search Route</button>
+            </form>
+            <div id="searchRouteResults" class="mt-4"></div>
+
         </div>
 
         <!-- Boarding tab -->
@@ -779,6 +794,29 @@
                 console.error('Error:', error);
             });
     }
+
+    function searchRoute() {
+    const startStation = document.getElementById('searchStartStation').value;
+    const endStation = document.getElementById('searchEndStation').value;
+
+    fetch(`/search_route?start_station=${startStation}&end_station=${endStation}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsContainer = document.getElementById('searchRouteResults');
+            resultsContainer.innerHTML = '';
+
+            if (data.route) {
+                const routeElement = document.createElement('p');
+                routeElement.textContent = `Route: ${data.route}`;
+                resultsContainer.appendChild(routeElement);
+            } else {
+                resultsContainer.innerHTML = '<p>' + data.message + '</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
 
     function testConnection() {
         fetch('http://localhost:5000/test_connection', {

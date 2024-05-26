@@ -483,6 +483,26 @@ def register_routes(app):
             print(str(e))
             return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
 
+    @app.route('/search_route', methods=['GET'])
+    def search_route():
+        # Get query parameters
+        try:
+            start_station = request.args.get('start_station')
+            end_station = request.args.get('end_station')
+
+            # Call get_route method with the provided start and end stations
+            route = get_route(start_station, end_station)
+
+            # Check if a route was found
+            if route is None:
+                return jsonify({'message': 'No route found between the provided stations'}), 404
+
+            # Convert the route to JSON and return
+            return jsonify({'route': route}), 200
+        except Exception as e:
+            print(str(e))
+            return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
+
 
 if __name__ == '__main__':
     app = create_app()
