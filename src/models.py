@@ -1,4 +1,4 @@
-from src.app import db
+from app import db
 
 
 class Station(db.Model):
@@ -43,6 +43,14 @@ class Passenger(db.Model):
     phone_number = db.Column(db.Text)
     gender = db.Column(db.Text)
     district = db.Column(db.Text)
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'id_number': self.id_number,
+            'phone_number': self.phone_number,
+            'gender': self.gender,
+            'district': self.district
+        }
 
 
 class Card(db.Model):
@@ -51,6 +59,12 @@ class Card(db.Model):
     code = db.Column(db.Text, unique=True, nullable=False)
     money = db.Column(db.Numeric, nullable=False)
     create_time = db.Column(db.DateTime, nullable=False)
+    def to_dict(self):
+        return {
+            'code': self.code,
+            'money': self.money,
+            'create_time': self.create_time
+        }
 
 
 class Line(db.Model):
@@ -106,6 +120,9 @@ class UnexitedRidePassenger(db.Model):
     start_station = db.Column(db.Text, db.ForeignKey('stations.english_name'), nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     level = db.Column(db.Integer, nullable=False, default=0)
+    # Add a relationship to the Passenger model
+    passenger = db.relationship('Passenger', backref=db.backref('unexited_rides', lazy=True))
+
 
 
 class UnexitedRideCard(db.Model):
@@ -115,3 +132,5 @@ class UnexitedRideCard(db.Model):
     start_station = db.Column(db.Text, db.ForeignKey('stations.english_name'), nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     level = db.Column(db.Integer, nullable=False, default=0)
+    # Add a relationship to the Card model
+    card = db.relationship('Card', backref=db.backref('unexited_rides', lazy=True))

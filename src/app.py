@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
+from sqlalchemy.orm import joinedload
+
 from config import Config
 import logging
 from flask_cors import CORS  # 导入 CORS
@@ -9,7 +12,7 @@ from function import *
 db = SQLAlchemy()
 
 
-def create_app():
+def create_app(*args, **kwargs):
     app = Flask(__name__)
     app.config.from_object(Config)
 
@@ -24,10 +27,7 @@ def create_app():
     # Register routes
     register_routes(app)
 
-    # Route to serve the HTML file
-    @app.route('/')
-    def serve_html():
-        return send_from_directory('static', 'Transit_system.html')
+
 
     return app
 
@@ -371,14 +371,30 @@ def register_routes(app):
             return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
 
     # 7. Current Boarders
+    # @app.route('/search_passenger/<passenger_id>', methods=['GET'])
+    # def search_passenger(passenger_id):
+    #     try:
+    #         # Query for the passenger's boarding information
+    #         board_info = db.session.query(UnexitedRidePassenger).filter(
+    #             UnexitedRidePassenger.user_id == passenger_id
+    #         ).all()
+    #         board_info = [{'user_id': b.user_id, 'start_station': b.start_station, 'start_time': b.start_time} for b in
+    #                       board_info]
+    #         return jsonify(board_info), 200
+    #     except Exception as e:
+    #         print(str(e))
+    #         return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
+
     @app.route('/search_passenger/<passenger_id>', methods=['GET'])
     def search_passenger(passenger_id):
         try:
             # Query for the passenger's boarding information
-            board_info = db.session.query(UnexitedRidePassenger).filter(
+            board_info = db.session.query(UnexitedRidePassenger).options(
+                joinedload(UnexitedRidePassenger.passenger)).filter(
                 UnexitedRidePassenger.user_id == passenger_id
             ).all()
-            board_info = [{'user_id': b.user_id, 'start_station': b.start_station, 'start_time': b.start_time} for b in
+            board_info = [{'user_id': b.user_id, 'start_station': b.start_station, 'start_time': b.start_time,
+                           'passenger': b.passenger.to_dict()} for b in
                           board_info]
             return jsonify(board_info), 200
         except Exception as e:
@@ -389,10 +405,12 @@ def register_routes(app):
     def search_card(card_id):
         try:
             # Query for the card's boarding information
-            board_info = db.session.query(UnexitedRideCard).filter(
+            board_info = db.session.query(UnexitedRideCard).options(
+                joinedload(UnexitedRideCard.card)).filter(
                 UnexitedRideCard.user_id == card_id
             ).all()
-            board_info = [{'user_id': b.user_id, 'start_station': b.start_station, 'start_time': b.start_time} for b in
+            board_info = [{'user_id': b.user_id, 'start_station': b.start_station, 'start_time': b.start_time,
+                           'card': b.card.to_dict()} for b in
                           board_info]
             return jsonify(board_info), 200
         except Exception as e:
@@ -438,24 +456,14 @@ def register_routes(app):
 
     @app.route('/search_bus/<string:station_name>', methods=['GET'])
     def search_bus(station_name):
-        # Start with all records
         try:
-            query = db.session.query(Bus)
-
-            # Filter by station if provided
             if station_name:
                 station_id = db.session.query(Station.station_id).filter(Station.english_name == station_name).first()[0]
-                query = query.filter(Bus.station_id == station_id)
-
-            # Execute the query and fetch all results
-            buses = query.all()
-
-            # Convert records to JSON
-            buses_json = [
-                {'bus_id': b.bus_id, 'station_id': b.station_id, 'bus_name': b.bus_name, 'bus_info': b.bus_info,
-                 'chukou': b.chukou} for b in buses]
-
-            return jsonify(buses_json), 200
+                result = db.engine.execute(text(f"SELECT * FROM bus_view WHERE station_id = {station_id}"))
+                buses = [{'bus_name': row.bus_name, 'bus_info': row.bus_info, 'chukou': row.chukou} for row in result]
+                return jsonify(buses), 200
+            else:
+                return jsonify({'message': 'Station name is required'}), 400
         except Exception as e:
             print(str(e))
             return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
@@ -502,6 +510,15 @@ def register_routes(app):
         except Exception as e:
             print(str(e))
             return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
+
+            # Route to serve the HTML file
+    @app.route('/')
+    def serve_html():
+        return send_from_directory('static', 'Transit_system.html')
+
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory('static', 'favicon.ico')
 
 
 if __name__ == '__main__':
