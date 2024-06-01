@@ -370,20 +370,6 @@ def register_routes(app):
             print(str(e))
             return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
 
-    # 7. Current Boarders
-    # @app.route('/search_passenger/<passenger_id>', methods=['GET'])
-    # def search_passenger(passenger_id):
-    #     try:
-    #         # Query for the passenger's boarding information
-    #         board_info = db.session.query(UnexitedRidePassenger).filter(
-    #             UnexitedRidePassenger.user_id == passenger_id
-    #         ).all()
-    #         board_info = [{'user_id': b.user_id, 'start_station': b.start_station, 'start_time': b.start_time} for b in
-    #                       board_info]
-    #         return jsonify(board_info), 200
-    #     except Exception as e:
-    #         print(str(e))
-    #         return jsonify({'message': 'Error occurred', 'error': str(e)}), 400
 
     @app.route('/search_passenger/<passenger_id>', methods=['GET'])
     def search_passenger(passenger_id):
@@ -459,7 +445,7 @@ def register_routes(app):
         try:
             if station_name:
                 station_id = db.session.query(Station.station_id).filter(Station.english_name == station_name).first()[0]
-                result = db.engine.execute(text(f"SELECT * FROM bus_view WHERE station_id = {station_id}"))
+                result = db.session.execute(text(f"SELECT * FROM bus_view WHERE station_id = :station_id"), {'station_id': station_id})
                 buses = [{'bus_name': row.bus_name, 'bus_info': row.bus_info, 'chukou': row.chukou} for row in result]
                 return jsonify(buses), 200
             else:
@@ -519,6 +505,10 @@ def register_routes(app):
     @app.route('/favicon.ico')
     def favicon():
         return send_from_directory('static', 'favicon.ico')
+
+    @app.route('/bootstrap.min.css')
+    def bootstrap():
+        return send_from_directory('static', 'bootstrap.min.css')
 
 
 if __name__ == '__main__':
